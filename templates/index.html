@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LexiGen | GenAI Word Insight Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #e6edf3; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 sm:p-8">
+
+  <div class="max-w-2xl mx-auto w-full space-y-6 pt-6">
+    <!-- Header -->
+    <header class="text-center space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#161b22] border border-[#30363d] text-xs mono text-[#58a6ff]">
+        <span>Powered by Gemini 1.5 Flash</span>
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight text-white">LexiGen Word Explainer</h1>
+      <p class="text-sm text-[#8b949e]">Generate clear, contextual paragraph explanations for any word or concept.</p>
+    </header>
+
+    <!-- Generator Card -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 space-y-5">
+      <div>
+        <label for="word-input" class="block text-xs mono text-[#8b949e] mb-2 uppercase font-medium">Enter a Word or Concept</label>
+        <div class="flex gap-2">
+          <input type="text" id="word-input" placeholder="e.g. Quantum, Photosynthesis, Microservices..." 
+                 class="flex-1 px-4 py-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-white text-sm focus:outline-none focus:border-[#58a6ff] mono">
+          <button id="generate-btn" class="px-5 py-2.5 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white text-sm font-medium transition-colors flex items-center gap-2">
+            <span>Generate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Word Suggestions -->
+      <div class="flex items-center gap-2 flex-wrap text-xs mono text-[#8b949e]">
+        <span>Try:</span>
+        <button class="word-chip hover:text-white underline">Recursion</button>
+        <button class="word-chip hover:text-white underline">Blockchain</button>
+        <button class="word-chip hover:text-white underline">Semiconductor</button>
+        <button class="word-chip hover:text-white underline">Kubernetes</button>
+      </div>
+
+      <!-- Tone Selection -->
+      <div class="pt-2 border-t border-[#21262d]">
+        <label class="block text-xs mono text-[#8b949e] mb-2 uppercase font-medium">Select Tone</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <label class="flex items-center gap-2 p-2 rounded bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#58a6ff]">
+            <input type="radio" name="tone" value="general" checked class="text-[#58a6ff]">
+            <span>General</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#58a6ff]">
+            <input type="radio" name="tone" value="technical" class="text-[#58a6ff]">
+            <span>Technical</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#58a6ff]">
+            <input type="radio" name="tone" value="simple" class="text-[#58a6ff]">
+            <span>ELI5 / Simple</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded bg-[#0d1117] border border-[#30363d] cursor-pointer hover:border-[#58a6ff]">
+            <input type="radio" name="tone" value="historical" class="text-[#58a6ff]">
+            <span>Historical</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Box -->
+    <div id="result-box" class="hidden bg-[#161b22] border border-[#30363d] rounded-xl p-6 space-y-3">
+      <div class="flex items-center justify-between pb-3 border-b border-[#30363d]">
+        <div class="flex items-center gap-2">
+          <span class="text-xs mono text-[#8b949e]">Word:</span>
+          <span id="output-word" class="font-bold text-white text-base mono"></span>
+        </div>
+        <button id="copy-btn" class="text-xs mono text-[#58a6ff] hover:underline">[Copy Text]</button>
+      </div>
+      <div id="output-content" class="text-sm text-[#e6edf3] leading-relaxed whitespace-pre-line"></div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="hidden text-center py-8 space-y-2">
+      <div class="inline-block w-6 h-6 border-2 border-[#58a6ff] border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-xs mono text-[#8b949e]">Synthesizing information with Gemini...</p>
+    </div>
+
+    <!-- Error Banner -->
+    <div id="error-box" class="hidden p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs mono"></div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-12 text-center text-xs text-[#8b949e] mono">
+    Viswanathan • GenAI Mini Project • Python &amp; Gemini API
+  </footer>
+
+  <script>
+    const input = document.getElementById('word-input');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultBox = document.getElementById('result-box');
+    const outputWord = document.getElementById('output-word');
+    const outputContent = document.getElementById('output-content');
+    const loading = document.getElementById('loading');
+    const errorBox = document.getElementById('error-box');
+    const copyBtn = document.getElementById('copy-btn');
+    const chips = document.querySelectorAll('.word-chip');
+
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        input.value = chip.textContent;
+        generateExplanation();
+      });
+    });
+
+    const generateExplanation = async () => {
+      const word = input.value.trim();
+      if (!word) {
+        showError('Please enter a word first.');
+        return;
+      }
+
+      const toneEl = document.querySelector('input[name="tone"]:checked');
+      const tone = toneEl ? toneEl.value : 'general';
+
+      hideError();
+      resultBox.classList.add('hidden');
+      loading.classList.remove('hidden');
+      generateBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word, tone })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to generate explanation.');
+        }
+
+        outputWord.textContent = data.word;
+        outputContent.textContent = data.explanation;
+        resultBox.classList.remove('hidden');
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        loading.classList.add('hidden');
+        generateBtn.disabled = false;
+      }
+    };
+
+    const showError = (msg) => {
+      errorBox.textContent = msg;
+      errorBox.classList.remove('hidden');
+    };
+
+    const hideError = () => {
+      errorBox.classList.add('hidden');
+    };
+
+    generateBtn.addEventListener('click', generateExplanation);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') generateExplanation();
+    });
+
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(outputContent.textContent);
+      copyBtn.textContent = '[Copied!]';
+      setTimeout(() => copyBtn.textContent = '[Copy Text]', 2000);
+    });
+  </script>
+</body>
+</html>
